@@ -1291,6 +1291,30 @@ Extend({rel}, {func}[, {opts}])			*librelalg.Extend()*
 	Note that {func} should consistently return tuples over the same,
 	fixed, schema for the result to be a valid relation instance.
 
+	Note also that `Extend()`, for efficiency, internally works by
+	extending and emitting the tuple returned by its argument without
+	creating a copy. If the extending function returns `t` instead of
+	a new tuple then `t` is modified in-place. For example:
+>
+	var r = [{A: 1}, {A: 2}]
+	var s = Query(r
+	  ->Select((t) => t.A == 1)
+	  ->Extend((t) => {
+	    # Modify and return t itself, not a copy
+	    t.B = 2 
+	    return t
+	  }, {force: true})
+	)
+	echo r
+<
+	The output is:
+>
+	[{A: 1, B: 2}, {A: 2}]
+<
+	In particular, `r` is no more a relation instance. To avoid such side
+	effects, make sure that the function passed to `Extend()` returns
+	a new tuple.
+
 	This is a pipeline operator, returning a continuation.
 
 Filter({rel}, {func})				*librelalg.Filter()*

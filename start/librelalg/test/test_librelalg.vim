@@ -1629,6 +1629,33 @@ def Test_RA_ExtendWithEmptyTuple()
   })))
 enddef
 
+def Test_RA_ExtendInPlace()
+  var r = [
+    {A: 1, B: 'b'},
+    {A: 2, B: 'b'},
+  ]
+
+  var result = Query(r
+    ->Select((t) => t.A == 1)
+    ->Extend((t: Tuple): Tuple => {
+      t.C = 'c'
+      return t
+    }, {force: true})
+  )
+
+  const expected = [
+    {A: 1, B: 'b', C: 'c'},
+  ]
+
+  assert_equal(expected, result)
+
+  # r has been modified
+  assert_equal([
+    {A: 1, B: 'b', C: 'c'},
+    {A: 2, B: 'b'},
+  ], r)
+enddef
+
 def Test_RA_Max()
   var R = Rel.new('R', {A: Int, B: Str, C: Float, D: Bool}, [['A']])
   const r = R.Instance()
