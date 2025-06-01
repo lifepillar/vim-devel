@@ -94,6 +94,16 @@ const ColorKind = {
 }
 
 # Integrity constraints {{{
+def IsValidDiscriminator(t: Tuple): bool
+  if t.DiscrName == 't_Co'
+    FailedMsg("'t_Co' is a reserved name and cannot be used as a discriminator")
+
+    return false
+  endif
+
+  return true
+enddef
+
 def IsValidColorName(t: Tuple): bool
   if t.Name == 'none' ||
      t.Name == 'fg'   ||
@@ -141,7 +151,6 @@ export class Database
     {Environment: 'default', NumColors: 16777216},
     {Environment:     'gui', NumColors: 16777216},
     {Environment:     '256', NumColors:      256},
-    {Environment:      '88', NumColors:       88},
     {Environment:      '16', NumColors:       16},
     {Environment:       '8', NumColors:        8},
     {Environment:       '0', NumColors:        0},
@@ -166,10 +175,6 @@ export class Database
     {Environment: '256',     AttrType: 'Bg',      AttrKey: 'ctermbg'},
     {Environment: '256',     AttrType: 'Special', AttrKey: 'ctermul'},
     {Environment: '256',     AttrType: 'Style',   AttrKey: 'cterm'  },
-    {Environment:  '88',     AttrType: 'Fg',      AttrKey: 'ctermfg'},
-    {Environment:  '88',     AttrType: 'Bg',      AttrKey: 'ctermbg'},
-    {Environment:  '88',     AttrType: 'Special', AttrKey: 'ctermul'},
-    {Environment:  '88',     AttrType: 'Style',   AttrKey: 'cterm'  },
     {Environment:  '16',     AttrType: 'Fg',      AttrKey: 'ctermfg'},
     {Environment:  '16',     AttrType: 'Bg',      AttrKey: 'ctermbg'},
     {Environment:  '16',     AttrType: 'Special', AttrKey: 'ctermul'},
@@ -260,7 +265,8 @@ export class Database
       throw $'Invalid background: "{this.background}". Please use "dark" or "light".'
     endif
 
-    this.Color.OnInsertCheck('Valid color',           IsValidColorName)
+    this.Discriminator.OnInsertCheck('Valid discriminator', IsValidDiscriminator)
+    this.Color.OnInsertCheck('Valid color', IsValidColorName)
     this.Color.OnInsertCheck('Valid 256-based color', IsValidBase256Value)
 
     ForeignKey(this.Attribute, 'Environment')
