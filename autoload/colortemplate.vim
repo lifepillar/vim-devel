@@ -2,9 +2,9 @@ vim9script
 
 import 'libpath.vim'                                     as path
 import '../import/libcolortemplate.vim'                  as lib
-import '../import/colortemplate/generator/vim9.vim'      as vim9generator
-import '../import/colortemplate/generator/viml.vim'      as vimlgenerator
-import '../import/colortemplate/generator/template.vim'  as templategenerator
+import '../import/colortemplate/generator/vim9.vim'      as vim9
+import '../import/colortemplate/generator/viml.vim'      as viml
+import '../import/colortemplate/generator/template.vim'  as colortemplate
 
 type Colorscheme = lib.Colorscheme
 type Result      = lib.ParserResult
@@ -364,9 +364,8 @@ export def Build(bufnr: number, outdir = '', bang = '', opts: dict<any> = {}): b
     return Error('Command can be executed only on Colortemplate buffers')
   endif
 
-  var parseOnly:  bool          = get(opts, 'parseonly', false)
-  var generator:  lib.Generator = get(opts, 'generator', null_object)
-  var filesuffix: string        = get(opts, 'filesuffix', '.vim')
+  var parseOnly:  bool   = get(opts, 'parseonly', false)
+  var filesuffix: string = get(opts, 'filesuffix', '.vim')
 
   var text      = join(getbufline(bufnr, 1, '$'), "\n")
   var overwrite = (bang == '!')
@@ -403,21 +402,22 @@ export def Build(bufnr: number, outdir = '', bang = '', opts: dict<any> = {}): b
     return false
   endif
 
-  if generator == null
-    if theme.options.backend == 'template'
-      generator = templategenerator.Generator.new()
-      filesuffix = '.colortemplate'
-    elseif theme.options.backend == 'vim9'
-      generator = vim9generator.Generator.new()
-    elseif theme.options.backend->In(['viml', 'legacy'])
-      generator = vimlgenerator.Generator.new()
-    else
-      throw $'Unexpected value for generator: {theme.options.backend}'
-    endif
+  var backend = get(opts, 'backend', theme.options.backend)
+  var generator: lib.Generator
+
+  if backend == 'template'
+    generator = colortemplate.Generator.new(theme)
+    filesuffix = '.colortemplate'
+  elseif backend == 'vim9'
+    generator = vim9.Generator.new(theme)
+  elseif backend == 'viml'
+    generator = viml.Generator.new(theme)
+  else
+    return Error($"Invalid generator: '{backend}'")
   endif
 
   var startGen   = reltime()
-  var content    = generator.Generate(theme)
+  var content    = generator.Generate()
   var elapsedGen = 1000.0 * reltimefloat(reltime(startGen))
   var name       = theme.shortname .. filesuffix
   var filePath   = filesuffix == '.vim' ? path.Join(outputDir, 'colors', name) : path.Join(outputDir, name)
