@@ -65,6 +65,7 @@ type Tuple          = ra.Tuple
 type Rel            = ra.Rel
 type Relation       = ra.Relation
 
+const AntiJoin      = ra.AntiJoin
 const Bool          = ra.Bool
 const DictTransform = ra.DictTransform
 const EquiJoin      = ra.EquiJoin
@@ -72,7 +73,7 @@ const FailedMsg     = ra.FailedMsg
 const Float         = ra.Float
 const ForeignKey    = ra.ForeignKey
 const Int           = ra.Int
-const Minus         = ra.Minus
+const Join          = ra.Join
 const LeftEquiJoin  = ra.LeftEquiJoin
 const PartitionBy   = ra.PartitionBy
 const Project       = ra.Project
@@ -93,6 +94,10 @@ const ColorKind = {
   '':    'GUI',
 }
 
+def In(item: any, items: list<any>): bool
+  return index(items, item) != -1
+enddef
+
 # Integrity constraints {{{
 def IsValidDiscriminator(t: Tuple): bool
   if t.DiscrName == 't_Co'
@@ -108,6 +113,7 @@ def IsValidColorName(t: Tuple): bool
   if t.Name == 'none' ||
      t.Name == 'fg'   ||
      t.Name == 'bg'   ||
+     t.Name == 'ul'   ||
      t.Name == 'omit'
     FailedMsg($'"{t.Name}" is a reserved name and cannot be used as a color name')
 
@@ -200,7 +206,8 @@ export class Database
     {Name: '',     GUI: '',     Base256: '',     Base256Hex: '', Base16: '',   }, # For when color is omitted
     {Name: 'none', GUI: 'NONE', Base256: 'NONE', Base256Hex: '', Base16: 'NONE'},
     {Name: 'fg',   GUI: 'fg',   Base256: 'fg',   Base256Hex: '', Base16: 'fg', },
-    {Name: 'bg',   GUI: 'bg',   Base256: 'bg',   Base256Hex: '', Base16: 'bg', }
+    {Name: 'bg',   GUI: 'bg',   Base256: 'bg',   Base256Hex: '', Base16: 'bg', },
+    {Name: 'ul',   GUI: 'ul',   Base256: 'ul',   Base256Hex: '', Base16: 'ul', },
   ])
 
   # Discriminators are variables that can be used to conditionally define
@@ -232,9 +239,10 @@ export class Database
   ])
 
   var HighlightGroup = Rel.new('Highlight Group', {
-    HiGroup:   Str,
-    DiscrName: Str,
-  }, 'HiGroup')
+    HiGroup:        Str,
+    NormalizedName: Str,
+    DiscrName:      Str,
+  }, [['HiGroup'], ['NormalizedName']])
 
   var HighlightGroupDef = Rel.new('Highlight Group Definition', {
     HiGroup:   Str,
@@ -345,18 +353,26 @@ export class Database
   enddef
 
   def InsertHighlightGroup_(hiGroupName: string, discrName: string)
-    var u = this.HighlightGroup.Lookup(['HiGroup'], [hiGroupName])
+    var normalizedName = tolower(hiGroupName)
+    var u = this.HighlightGroup.Lookup(['NormalizedName'], [normalizedName])
 
     if u is KEY_NOT_FOUND
       this.HighlightGroup.Insert({
-        HiGroup:     hiGroupName,
-        DiscrName:   discrName,
+        HiGroup:        hiGroupName,
+        NormalizedName: normalizedName,
+        DiscrName:      discrName,
       })
+    elseif u.HiGroup != hiGroupName
+      throw printf(
+        "Inconsistent spelling of highlight group: '%s' was spelled '%s' (%s background)",
+        hiGroupName, u.HiGroup, this.background
+      )
     elseif !empty(discrName)
       if empty(u.DiscrName)
         this.HighlightGroup.Upsert({
-          HiGroup:     hiGroupName,
-          DiscrName:   discrName,
+          HiGroup:        hiGroupName,
+          NormalizedName: normalizedName,
+          DiscrName:      discrName,
         })
       elseif u.DiscrName != discrName
         throw printf(
@@ -477,15 +493,47 @@ export class Database
   def MissingDefaultDefs(): list<string>
     # Return the highlight groups for which no default definition exists
     return this.HighlightGroup
-      ->Project('HiGroup')
-      ->Minus(this.HighlightGroupDef
+      ->Project(['HiGroup', 'NormalizedName'])
+      ->AntiJoin(this.HighlightGroupDef
         ->Select((t) => t.Condition == 0)
-        ->Project('HiGroup')
+        ->Project('HiGroup'),
+        (t, u) => t.NormalizedName == tolower(u.HiGroup)
       )
       ->SortBy('HiGroup')
       ->Transform((t) => t.HiGroup)
   enddef
 
+  # Special color names 'fg', 'bg', 'ul' can only be used if the corresponding
+  # Normal color is defined (`:help E419`). The following query returns the
+  # highlight groups violating that rule.
+  def HighlightGroupsUsingAliasesInconsistently(): list<string>
+    var normal = this.HighlightGroup.Lookup(['NormalizedName'], ['normal'])
+
+    if normal is KEY_NOT_FOUND
+      # Every highlight group using 'fg', 'bg', or 'ul' is a mistake
+      return this.BaseGroup
+        ->Select((t) => t.Fg->In(['fg', 'bg', 'ul']) || t.Bg->In(['fg', 'bg', 'ul']) || t.Special->In(['fg', 'bg', 'ul']))
+        ->SortBy('HiGroup')
+        ->Transform((v) => v.HiGroup)
+    endif
+
+    # This query is a safe approximation of the true condition that should be
+    # tested. In some edge cases when Normal is overridden it may raise false
+    # positives, though.
+    return this.BaseGroup
+      ->Select((t) => t.HiGroup == normal.HiGroup)
+      ->Join(this.BaseGroup, (n, u) => {
+        return (
+          n.Fg == 'none' && (u.Fg == 'fg' || u.Bg == 'fg' || u.Special == 'fg')
+        ) || (
+          n.Bg == 'none' && (u.Fg == 'bg' || u.Bg == 'bg' || u.Special == 'bg')
+        ) || (
+          n.Special == 'none' && (u.Fg == 'ul' || u.Bg == 'ul' || u.Special == 'ul')
+        )
+      }, {prefix: 'g_'})
+      ->SortBy('g_HiGroup')
+      ->Transform((v) => v.g_HiGroup)
+  enddef
 endclass
 
 export class Colorscheme

@@ -85,6 +85,42 @@ def CheckMissing(theme: Colorscheme): bool
     return true
 enddef
 
+def CheckNoneNormal(theme: Colorscheme): bool
+  for background in ['dark', 'light']
+    if !theme.HasBackground(background)
+      continue
+    endif
+
+    var db = theme.Db(background)
+    var groups = db.HighlightGroupsUsingAliasesInconsistently()
+
+    if !empty(groups)
+      return Error(
+        "Some highlight groups use special color names 'fg', 'bg', or 'ul', " ..
+        $"but Normal does not define the corresponding color (see `:help E419`): {groups}"
+      )
+    endif
+  endfor
+
+    return true
+enddef
+
+def CheckColorschemeConsistency(theme: Colorscheme): bool
+  if !CheckMetadata(theme)
+    return false
+  endif
+
+  if !CheckMissing(theme)
+    return false
+  endif
+
+  if !CheckNoneNormal(theme)
+    return false
+  endif
+
+  return true
+enddef
+
 
 def WriteFile(filePath: string, content: list<string>, overwrite: bool = false): bool
   if overwrite || !path.Exists(filePath)
@@ -394,11 +430,7 @@ export def Build(bufnr: number, outdir = '', bang = '', opts: dict<any> = {}): b
     return true
   endif
 
-  if !CheckMetadata(theme)
-    return false
-  endif
-
-  if !CheckMissing(theme)
+  if !CheckColorschemeConsistency(theme)
     return false
   endif
 
