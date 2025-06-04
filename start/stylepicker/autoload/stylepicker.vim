@@ -507,7 +507,7 @@ def ChooseGuiColor(): string
   #  # Prompt the user to enter a hex value for a color.
   # #  Return an empty string if the input is invalid.
   ##
-  var newCol = input('[StylePicker] New color: #', '')
+  var newCol = trim(input('[StylePicker] New color: #', ''))
   echo "\r"
 
   if newCol =~ '\m^[0-9a-fa-f]\{1,6}$'
@@ -528,7 +528,7 @@ def ChooseTermColor(): string
   #  # Prompt the user to enter a numeric value for a terminal color and
   # # return the value as a hex color string.
   ## Return an empty string if the input is invalid.
-  var newCol = input('[StylePicker] New terminal color [16-255]: ', '')
+  var newCol = trim(input('[StylePicker] New terminal color [16-255]: ', ''))
   echo "\r"
   var numCol = str2nr(newCol)
 
@@ -544,7 +544,7 @@ def ChooseHiGroup(): string
   #  # Prompt the user to enter a the name of a highlight group.
   # # Return an empty string if the input is invalid.
   ##
-  var hiGroup = input('[StylePicker] Highlight group: ', '', 'highlight')
+  var hiGroup = trim(input('[StylePicker] Highlight group: ', '', 'highlight'))
   echo "\r"
 
   if hlexists(hiGroup)
