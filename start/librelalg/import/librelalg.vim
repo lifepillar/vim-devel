@@ -272,22 +272,38 @@ endinterface
 # }}}
 
 # Transactions {{{
-class TransactionManager
-  var _running: number              = 0
-  var _pending: list<ITransactable> = []
-  var _messages: list<string>       = []
+class Logger
+  var _messages: list<string> = []
 
-  def Add(rel: ITransactable)
-    if rel->IsNotIn(this._pending)
-      this._pending->add(rel)
-    endif
-  enddef
-
-  def LogMessage(msg: string, prepend = false)
+  def Log(msg: string, prepend = false)
     if prepend
       this._messages->insert(msg)
     else
       this._messages->add(msg)
+    endif
+  enddef
+
+  def IsEmpty(): bool
+    return empty(this._messages)
+  enddef
+
+  def string(): string
+    return join(this._messages)
+  enddef
+
+  def Flush()
+    this._messages = []
+  enddef
+endclass
+
+class TransactionManager
+  var _logger:  Logger
+  var _running: number              = 0
+  var _pending: list<ITransactable> = []
+
+  def Add(rel: ITransactable)
+    if rel->IsNotIn(this._pending)
+      this._pending->add(rel)
     endif
   enddef
 
@@ -322,7 +338,7 @@ class TransactionManager
       endfor
 
       this._pending  = []
-      this._messages = []
+      this._logger.Flush()
     else
       this.Rollback()
     endif
@@ -333,17 +349,18 @@ class TransactionManager
       rel.Rollback_()
     endfor
 
-    var errors = join(this._messages)
+    var errors = string(this._logger)
 
+    this._logger.Flush()
     this._pending  = []
-    this._messages = []
     this._running  = 0
 
     throw errors
   enddef
 endclass
 
-var globalTransactionManager = TransactionManager.new()
+var logger                   = Logger.new()
+var globalTransactionManager = TransactionManager.new(logger)
 
 export def Transaction(Body: func())
   globalTransactionManager.Begin()
@@ -352,7 +369,7 @@ export def Transaction(Body: func())
 enddef
 
 export def FailedMsg(message: string, prepend = false)
-  globalTransactionManager.LogMessage(message, prepend)
+  logger.Log(message, prepend)
 enddef
 # }}}
 
