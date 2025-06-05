@@ -95,7 +95,7 @@ def CompareValues(v1: any, v2: any, invert: bool = false): number
     return 0
   endif
 
-  const cmp = (invert ? -1 : 1)
+  var cmp = (invert ? -1 : 1)
 
   if type(v1) == v:t_bool # Only true/false (none is not allowed)
     return v1 && !v2 ? cmp : -cmp
@@ -107,7 +107,7 @@ enddef
 def CompareTuples(t: Tuple, u: Tuple, attrs: AttrSet, invert: list<bool> = []): number
   if empty(invert) # fast path
     for a in attrs
-      const cmp = CompareValues(t[a], u[a])
+      var cmp = CompareValues(t[a], u[a])
 
       if cmp == 0
         continue
@@ -119,12 +119,12 @@ def CompareTuples(t: Tuple, u: Tuple, attrs: AttrSet, invert: list<bool> = []): 
     return 0
   endif
 
-  const n = len(attrs)
+  var n = len(attrs)
   var   i = 0
 
   while i < n
-    const a   = attrs[i]
-    const cmp = CompareValues(t[a], u[a], invert[i])
+    var a   = attrs[i]
+    var cmp = CompareValues(t[a], u[a], invert[i])
 
     if cmp == 0
       i += 1
@@ -865,7 +865,7 @@ export def From(Arg: any): Continuation
     return Arg
   endif
 
-  const rel: Relation = Instance(Arg)
+  var rel: Relation = Instance(Arg)
 
   return (Emit: Consumer) => {
     for t in rel
@@ -912,9 +912,9 @@ export def Sort(Arg: any, ComparisonFn: func(Tuple, Tuple): number): Relation
 enddef
 
 export def SortBy(Arg: any, attrs: any, opts: list<string> = []): Relation
-  const invert: list<bool> = mapnew(opts, (_, v) => v == 'd')
-  const attrList: AttrList = Listify(attrs)
-  const SortAttrPred = (t: Tuple, u: Tuple): number => CompareTuples(t, u, attrList, invert)
+  var invert: list<bool> = mapnew(opts, (_, v) => v == 'd')
+  var attrList: AttrList = Listify(attrs)
+  var SortAttrPred = (t: Tuple, u: Tuple): number => CompareTuples(t, u, attrList, invert)
 
   return Sort(Arg, SortAttrPred)
 enddef
@@ -934,12 +934,12 @@ enddef
 
 export def SumBy(Arg: any, groupBy: any, attr: Attr, aggrName = 'sum'): Relation
   var   aggr: dict<Tuple> = {}
-  const groupBy_: AttrSet = Listify(groupBy)
-  const Cont = IsFunc(Arg) ? Arg : From(Arg)
+  var groupBy_: AttrSet = Listify(groupBy)
+  var Cont = IsFunc(Arg) ? Arg : From(Arg)
 
   Cont((t: Tuple) => {
     var tp = ProjectTuple(t, groupBy_)
-    const group = string(values(tp))
+    var group = string(values(tp))
 
     if !aggr->has_key(group)
       aggr[group] = tp->extend({[aggrName]: 0})
@@ -954,12 +954,12 @@ enddef
 export def CountBy(Arg: any, groupBy: any, attr: Attr = null_string, aggrName = 'count'): Relation
   var   aggrCount: dict<Tuple> = {}
   var   aggrDistinct: dict<dict<bool>> = {}
-  const groupBy_: AttrSet = Listify(groupBy)
-  const Cont = IsFunc(Arg) ? Arg : From(Arg)
+  var groupBy_: AttrSet = Listify(groupBy)
+  var Cont = IsFunc(Arg) ? Arg : From(Arg)
 
   Cont((t: Tuple) => {
     var tp = ProjectTuple(t, groupBy_)
-    const group = string(values(tp))
+    var group = string(values(tp))
 
     if !aggrCount->has_key(group)
       aggrCount[group] = tp->extend({[aggrName]: 0})
@@ -979,12 +979,12 @@ enddef
 
 export def MaxBy(Arg: any, groupBy: any, attr: Attr, aggrName = 'max'): Relation
   var   aggr: dict<Tuple> = {}
-  const groupBy_: AttrSet = Listify(groupBy)
-  const Cont = IsFunc(Arg) ? Arg : From(Arg)
+  var groupBy_: AttrSet = Listify(groupBy)
+  var Cont = IsFunc(Arg) ? Arg : From(Arg)
 
   Cont((t: Tuple) => {
     var tp = ProjectTuple(t, groupBy_)
-    const group = string(values(tp))
+    var group = string(values(tp))
 
     if !aggr->has_key(group)
       aggr[group] = tp->extend({[aggrName]: t[attr]})
@@ -1000,12 +1000,12 @@ enddef
 
 export def MinBy(Arg: any, groupBy: any, attr: Attr, aggrName = 'min'): Relation
   var   aggr: dict<Tuple> = {}
-  const groupBy_: AttrSet = Listify(groupBy)
-  const Cont = IsFunc(Arg) ? Arg : From(Arg)
+  var groupBy_: AttrSet = Listify(groupBy)
+  var Cont = IsFunc(Arg) ? Arg : From(Arg)
 
   Cont((t: Tuple) => {
     var tp = ProjectTuple(t, groupBy_)
-    const group = string(values(tp))
+    var group = string(values(tp))
 
     if !aggr->has_key(group)
       aggr[group] = tp->extend({[aggrName]: t[attr]})
@@ -1021,12 +1021,12 @@ enddef
 export def AvgBy(Arg: any, groupBy: any, attr: Attr, aggrName = 'avg'): Relation
   var   aggrAvg: dict<Tuple> = {}
   var   aggrCnt: dict<number> = {}
-  const groupBy_: AttrSet = Listify(groupBy)
-  const Cont = IsFunc(Arg) ? Arg : From(Arg)
+  var groupBy_: AttrSet = Listify(groupBy)
+  var Cont = IsFunc(Arg) ? Arg : From(Arg)
 
   Cont((t: Tuple) => {
     var tp = ProjectTuple(t, groupBy_)
-    const group = string(values(tp))
+    var group = string(values(tp))
 
     if !aggrAvg->has_key(group)
       aggrAvg[group] = tp->extend({[aggrName]: 0.0})
@@ -1067,7 +1067,7 @@ export def Rename(Arg: any, renamed: dict<string>): Continuation
 enddef
 
 export def Select(Arg: any, Pred: UnaryPredicate): Continuation
-  const Cont = From(Arg)
+  var Cont = From(Arg)
 
   return (Emit: Consumer) => {
     Cont((t: Tuple) => {
@@ -1079,15 +1079,15 @@ export def Select(Arg: any, Pred: UnaryPredicate): Continuation
 enddef
 
 export def Project(Arg: any, attrs: any): Continuation
-  const Cont = From(Arg)
-  const attrList = Listify(attrs)
+  var Cont = From(Arg)
+  var attrList = Listify(attrs)
 
   return (Emit: Consumer) => {
     var seen: dict<bool> = {}
 
     def Proj(t: Tuple)
       var u = ProjectTuple(t, attrList)
-      const v = string(values(u))
+      var v = string(values(u))
       if !seen->has_key(v)
         seen[v] = true
         Emit(u)
@@ -1134,8 +1134,8 @@ export def Join(
 enddef
 
 export def EquiJoinPred(lAttrs: AttrList, rAttrs: AttrList = null_list): BinaryPredicate
-  const n = len(lAttrs)
-  const rgt = rAttrs == null ? lAttrs : rAttrs
+  var n = len(lAttrs)
+  var rgt = rAttrs == null ? lAttrs : rAttrs
 
   if n != len(rgt)
     throw printf(E200, ListStr(lAttrs), ListStr(rgt))
@@ -1195,8 +1195,8 @@ def NatJoinPred(t: Tuple, u: Tuple): bool
 enddef
 
 export def NatJoin(Arg1: any, Arg2: any): Continuation
-  const rel  = Query(Arg2)
-  const Cont = From(Arg1)
+  var rel  = Query(Arg2)
+  var Cont = From(Arg1)
 
   return (Emit: Consumer) => {
     Cont((t: Tuple) => {
@@ -1225,8 +1225,8 @@ export def Product(Arg1: any, Arg2: any, opts: dict<any> = {}): Continuation
 enddef
 
 export def Intersect(Arg1: any, Arg2: any): Continuation
-  const rel  = Query(Arg2)
-  const Cont = From(Arg1)
+  var rel  = Query(Arg2)
+  var Cont = From(Arg1)
 
   return (Emit: Consumer) => {
     Cont((t: Tuple) => {
@@ -1241,8 +1241,8 @@ export def Intersect(Arg1: any, Arg2: any): Continuation
 enddef
 
 export def Minus(Arg1: any, Arg2: any): Continuation
-  const rel  = Query(Arg2)
-  const Cont = From(Arg1)
+  var rel  = Query(Arg2)
+  var Cont = From(Arg1)
 
   return (Emit: Consumer) => {
     Cont((t: Tuple) => {
@@ -1258,8 +1258,8 @@ export def Minus(Arg1: any, Arg2: any): Continuation
 enddef
 
 export def SemiJoin(Arg1: any, Arg2: any, Pred: BinaryPredicate): Continuation
-  const rel  = Query(Arg2)
-  const Cont = From(Arg1)
+  var rel  = Query(Arg2)
+  var Cont = From(Arg1)
 
   return (Emit: Consumer) => {
     Cont((t: Tuple) => {
@@ -1312,7 +1312,7 @@ export def AntiEquiJoin(Arg1: any, Arg2: any, opts: dict<any> = {}): Continuatio
     }
   endif
 
-  const Pred = EquiJoinPred(lAttrList, rAttrList)
+  var Pred = EquiJoinPred(lAttrList, rAttrList)
 
   return AntiJoin(Arg1, Arg2, Pred)
 enddef
@@ -1443,26 +1443,26 @@ enddef
 # where r₁ = π_K(r) and s₁ = π_K((s × r₁) - r), with K the set of attributes
 # appearing in r but not in s.
 export def CoddDivide(Arg1: any, Arg2: any, divisorAttrs: AttrSet = []): Continuation
-  const r = Query(Arg1)
+  var r = Query(Arg1)
 
   if empty(r)
     return From(r)
   endif
 
-  const s = Query(Arg2)
+  var s = Query(Arg2)
 
   if empty(s)
-    const K = IsRel(Arg2)
+    var K = IsRel(Arg2)
       ? filter(keys(r[0]), (i, v) => index((<IRel>Arg2).attributes, v) == -1)
       : filter(keys(r[0]), (i, v) => index(divisorAttrs, v) == -1)
 
     return Project(r, K)
   endif
 
-  const attrS = keys(s[0])
-  const K     = filter(keys(r[0]), (i, v) => index(attrS, v) == -1)
-  const R1    = Project(r, K)
-  const S1    = Product(s, R1)->Minus(r)->Project(K)
+  var attrS = keys(s[0])
+  var K     = filter(keys(r[0]), (i, v) => index(attrS, v) == -1)
+  var R1    = Project(r, K)
+  var S1    = Product(s, R1)->Minus(r)->Project(K)
 
   return Minus(R1, S1)
 enddef
@@ -1492,24 +1492,24 @@ enddef
 # C Date, An Introduction to Database Systems
 # M Levene and G Loizou, A Guided Tour of Relational Databases and Beyond, Ex. 3.4
 export def Divide(Arg1: any, Arg2: any): Continuation
-  const r = Query(Arg1)
+  var r = Query(Arg1)
 
   if empty(r)
     return From(r)
   endif
 
-  const s = Query(Arg2)
+  var s = Query(Arg2)
 
   if empty(s)
     return From(s)
   endif
 
-  const attrR = keys(r[0])
-  const attrS = keys(s[0])
-  const X = filter(keys(r[0]), (_, v) => index(attrS, v) == -1)
-  const Z = filter(keys(s[0]), (_, v) => index(attrR, v) == -1)
-  const R_X = Project(r, X)
-  const Rhs = Product(R_X, s)->Minus(NatJoin(r, s))->Project(flattennew([X, Z]))
+  var attrR = keys(r[0])
+  var attrS = keys(s[0])
+  var X = filter(keys(r[0]), (_, v) => index(attrS, v) == -1)
+  var Z = filter(keys(s[0]), (_, v) => index(attrR, v) == -1)
+  var R_X = Project(r, X)
+  var Rhs = Product(R_X, s)->Minus(NatJoin(r, s))->Project(flattennew([X, Z]))
 
   return Project(s, Z)->Product(R_X)->Minus(Rhs)
 enddef
@@ -1780,11 +1780,11 @@ export def PartitionBy(Arg: any, groupBy: any, opts: dict<any> = {}): dict<any>
 enddef
 
 export def Transform(Arg: any, Fn: func(Tuple): any): list<any>
-  const Cont = From(Arg)
+  var Cont = From(Arg)
   var result = []
 
   Cont((t) => {
-    const value = Fn(t)
+    var value = Fn(t)
 
     if value == null
       return
@@ -1809,7 +1809,7 @@ def ExtendByMerging(d1: Tuple, d2: Tuple)
 enddef
 
 export def DictTransform(Arg: any, Fn: func(Tuple): Tuple, flatten = false): dict<any>
-  const Cont = From(Arg)
+  var Cont = From(Arg)
   var result: dict<any> = {}
 
   Cont((t) => {
@@ -1829,7 +1829,7 @@ enddef
 
 # NOTE: l2 may be longer than l1 (extra elements are simply ignored)
 export def Zip(l1: list<any>, l2: list<any>): Tuple
-  const n = len(l1)
+  var n = len(l1)
   var t: Tuple = {}
   var i = 0
 
@@ -1842,8 +1842,8 @@ export def Zip(l1: list<any>, l2: list<any>): Tuple
 enddef
 
 export def RelEq(R: any, S: any): bool
-  const rel1: Relation = Instance(R)
-  const rel2: Relation = Instance(S)
+  var rel1: Relation = Instance(R)
+  var rel2: Relation = Instance(S)
 
   return sort(copy(rel1)) == sort(copy(rel2))
 enddef
@@ -1941,7 +1941,7 @@ export def Table(R: any, opts: dict<any> = {}): string
     return printf(" %s\n%s\n", relname, repeat(sep, 2 + strwidth(relname)))
   endif
 
-  const attributes: AttrList = columns == null ? keys(rel[0]) : Listify(columns)
+  var attributes: AttrList = columns == null ? keys(rel[0]) : Listify(columns)
   var width: dict<number> = {}
 
   for attr in attributes
@@ -1951,7 +1951,7 @@ export def Table(R: any, opts: dict<any> = {}): string
   # Determine the maximum width for each column
   for t in rel
     for attr in attributes
-      const ll = gap + strwidth(String(t[attr]))
+      var ll = gap + strwidth(String(t[attr]))
       if ll > width[attr]
         width[attr] = ll
       endif
@@ -1981,7 +1981,7 @@ export def Table(R: any, opts: dict<any> = {}): string
   enddef
 
   # Pretty print
-  const separator = repeat(sep, totalWidth + 1)
+  var separator = repeat(sep, totalWidth + 1)
   var table = empty(relname) ? '' : ' ' .. relname .. "\n"
   table ..= separator .. "\n"
   table ..= printf(Fmt(totalWidth), FmtHeader())
