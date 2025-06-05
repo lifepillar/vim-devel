@@ -99,7 +99,7 @@ enddef
 # NOTE: the text should not match across lines.
 export def Text(text: string): Parser
   return (ctx: Context): Result => {
-    const n = len(text)
+    var n = len(text)
 
     if strpart(ctx.text, ctx.index, n) == text
       ctx.index = ctx.index + n
@@ -112,7 +112,7 @@ enddef
 
 export def Regex(pattern: string): Parser
   return (ctx: Context): Result => {
-    const match = matchstrpos(ctx.text, '^\%(' .. pattern .. '\)', ctx.index)
+    var match = matchstrpos(ctx.text, '^\%(' .. pattern .. '\)', ctx.index)
 
     if match[2] == -1
       return Failure(ctx)
@@ -134,7 +134,7 @@ enddef
 # Parser combinators {{{
 export def Lab(P: Parser, label: string): Parser
   return (ctx: Context): Result => {
-    const result = P(ctx)
+    var result = P(ctx)
 
     if result.success || result.label isnot FAIL
       return result
@@ -146,11 +146,11 @@ enddef
 
 export def Seq(...Parsers: list<Parser>): Parser
   return (ctx: Context): Result => {
-    const startIndex = ctx.index
+    var startIndex = ctx.index
     var values: list<any> = []
 
     for P in Parsers
-      const result = P(ctx)
+      var result = P(ctx)
 
       if result.success
         if result.value != null
@@ -171,7 +171,7 @@ export def OneOf(...Parsers: list<Parser>): Parser
     var farthestFailure = ctx.index
 
     for P in Parsers
-      const result = P(ctx)
+      var result = P(ctx)
 
       if result.success || result.label isnot FAIL
         return result
@@ -194,12 +194,12 @@ enddef
 
 export def Many(P: Parser): Parser
   return (ctx: Context): Result => {
-    const startIndex = ctx.index
+    var startIndex = ctx.index
     var values: list<any> = []
 
     while (true)
-      const currIndex = ctx.index
-      const result = P(ctx)
+      var currIndex = ctx.index
+      var result = P(ctx)
 
       if result.success
         if result.value != null
@@ -226,15 +226,15 @@ enddef
 
 export def Skip(P: Parser): Parser
   return (ctx: Context): Result => {
-    const result = P(ctx)
+    var result = P(ctx)
     return result.success ? Success() : result
   }
 enddef
 
 export def LookAhead(P: Parser): Parser
   return (ctx: Context): Result => {
-    const startIndex = ctx.index
-    const result = Skip(P)(ctx)
+    var startIndex = ctx.index
+    var result = Skip(P)(ctx)
     ctx.index = startIndex
     return result
   }
@@ -242,11 +242,11 @@ enddef
 
 export def NegLookAhead(P: Parser): Parser
   return (ctx: Context): Result => {
-    const startIndex = ctx.index
-    const result = Skip(P)(ctx)
+    var startIndex = ctx.index
+    var result = Skip(P)(ctx)
 
     if result.success
-      const errPos = ctx.index
+      var errPos = ctx.index
       ctx.index = startIndex
       return Failure(ctx, errPos)
     else
@@ -264,7 +264,7 @@ export const Blank = Regex('\%(\s\|\r\|\n\)*')
 
 export def Map(P: Parser, Fn: func(any, Context): any): Parser
   return (ctx: Context): Result => {
-    const result = P(ctx)
+    var result = P(ctx)
 
     if result.success
       try
@@ -280,7 +280,7 @@ enddef
 
 export def Apply(P: Parser, Fn: func(any, Context): void): Parser
   return (ctx: Context): Result => {
-    const result = P(ctx)
+    var result = P(ctx)
 
     if result.success
       try
