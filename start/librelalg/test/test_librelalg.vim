@@ -267,10 +267,12 @@ def Test_RA_InsertManyFailedConstraint()
   assert_equal(instance, R.Instance())
 
   AssertFails(() => {
-    R.InsertMany([
-      {A: 2, B: 'b2', C: false, D: 1.0},
-      {A: 1, B: 'b3', C: true,  D: 3.4},
-    ])
+    Transaction(() => {
+      R.InsertMany([
+        {A: 2, B: 'b2', C: false, D: 1.0},
+        {A: 1, B: 'b3', C: true,  D: 3.4},
+      ])
+    })
   }, "Duplicate key: {A: 1, C: true} already exists in R.")
 
   assert_equal(instance, R.Instance())
@@ -293,10 +295,12 @@ def Test_RA_InsertManyDuplicateKey()
   var RR = Rel.new('RR', {A: Int, B: Str, C: Bool, D: Float}, ['A', 'B', 'C'])
 
   AssertFails(() => {
-    RR.InsertMany([
-      {A: 0, B: 'b0', C: true, D: 1.2},
-      {A: 0, B: 'b0', C: true, D: 0.4},
-    ])
+    Transaction(() => {
+      RR.InsertMany([
+        {A: 0, B: 'b0', C: true, D: 1.2},
+        {A: 0, B: 'b0', C: true, D: 0.4},
+      ])
+    })
   }, "Duplicate key: {A: 0, B: 'b0', C: true} already exists in RR")
 
   assert_true(RR.IsEmpty())
@@ -322,17 +326,18 @@ def Test_RA_Update()
     {A: 1, B: 'x', C: false, D: 'new-d2'},
   ]
 
-  assert_true(RelEq(expected, R.Instance()))
+  assert_true(RelEq(expected, R.Instance()), '01')
 
   AssertFails(() => {
-    R.Update((t) => t.A == 0, (t) => {
-      t.C = false
-      t.D = ''
+    Transaction(() => {
+      R.Update((t) => t.A == 0, (t) => {
+        t.C = false
+        t.D = ''
+      })
     })
-    echo R.Index(['B', 'C'])
   }, "Duplicate key: {B: 'x', C: false}")
 
-  assert_true(RelEq(expected, R.Instance()))
+  assert_true(RelEq(expected, R.Instance()), '02')
 
   R.Update((t) => t.A == 0, (t) => {
     t.D = 'dd'
@@ -341,7 +346,7 @@ def Test_RA_Update()
   assert_true(RelEq([
     {A: 0, B: 'x', C: true,  D: 'dd'},
     {A: 1, B: 'x', C: false, D: 'new-d2'},
-  ], R.Instance()))
+  ], R.Instance()), '03')
 
   R.Update((t) => t.A == 2, (t) => {
     t.B = 'y'
@@ -350,7 +355,7 @@ def Test_RA_Update()
   assert_true(RelEq([
     {A: 0, B: 'x', C: true,  D: 'dd'},
     {A: 1, B: 'x', C: false, D: 'new-d2'},
-  ], R.Instance()))
+  ], R.Instance()), '04')
 
   R.Update((t) => true, (t) => {
     t.B = 'y'
@@ -359,7 +364,7 @@ def Test_RA_Update()
   assert_true(RelEq([
     {A: 0, B: 'y', C: true,  D: 'dd'},
     {A: 1, B: 'y', C: false, D: 'new-d2'},
-  ], R.Instance()))
+  ], R.Instance()), '05')
 enddef
 
 def Test_RA_UpdateDiscriminator()
@@ -546,8 +551,10 @@ def Test_RA_ReferentialIntegrityInsertUpdate()
   })
 
   AssertFails(() => {
-    S.Update((t) => t.B == 30, (t) => {
-      t.C = 'wz'
+    Transaction(() => {
+      S.Update((t) => t.B == 30, (t) => {
+        t.C = 'wz'
+      })
     })
   }, "S smurfs R: {C: 'wz'} not found in R[A]")
 
@@ -620,25 +627,27 @@ def Test_RA_CheckConstraint()
     RR.Insert({A: 2, B: -3})
   }, "B must be positive: got -3")
 
-  assert_equal([t0], RR.Instance())
+  assert_equal([t0], RR.Instance(), '01')
 
   RR.Update((t) => t.A == 1, (t) => {
     t.B = 3
   })
 
-  assert_equal([{A: 1, B: 3}], RR.Instance())
+  assert_equal([{A: 1, B: 3}], RR.Instance(), '02')
 
   AssertFails(() => {
-    RR.Update((t) => t.A == 1, (t) => {
-      t.B = -2
+    Transaction(() => {
+      RR.Update((t) => t.A == 1, (t) => {
+        t.B = -2
+      })
     })
   }, "B must be positive: got -2")
 
-  assert_equal([{A: 1, B: 3}], RR.Instance())
+  assert_equal([{A: 1, B: 3}], RR.Instance(), '03')
 
   RR.Delete()
 
-  assert_true(RR.IsEmpty())
+  assert_true(RR.IsEmpty(), '04')
 enddef
 
 def Test_RA_DeleteInsertUpdate()

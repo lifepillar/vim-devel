@@ -317,6 +317,10 @@ class TransactionManager
     return true
   enddef
 
+  def InTransaction(): bool
+    return this._running > 0
+  enddef
+
   def Begin()
     this._running += 1
   enddef
@@ -553,6 +557,29 @@ export class Rel implements IRel, ICheckable, ITransactable
   enddef
 
   def Insert(t: Tuple): Rel
+    if globalTransactionManager.InTransaction()
+      return this.TransactInsert_(t)
+    endif
+
+    return this.SimpleInsert_(t)
+  enddef
+
+  def SimpleInsert_(t: Tuple): Rel
+    this.Add_(t)
+
+    for constraint in this.insert_constraints
+      if !constraint.Check(t)
+        this.Remove_(t)
+        FailedMsg(printf(E011, constraint, TupleStr(t)), true)
+
+        throw string(logger)
+      endif
+    endfor
+
+    return this
+  enddef
+
+  def TransactInsert_(t: Tuple): Rel
     globalTransactionManager.Add(this)
 
     Transaction(() => {
@@ -572,6 +599,46 @@ export class Rel implements IRel, ICheckable, ITransactable
   enddef
 
   def Delete(P: UnaryPredicate = (t) => true): Relation
+    if globalTransactionManager.InTransaction()
+      return this.TransactDelete_(P)
+    endif
+
+    return this.SimpleDelete_(P)
+  enddef
+
+  def SimpleDelete_(P: UnaryPredicate = (t) => true): Relation
+    var deleted: list<Tuple> = []
+
+    for t in this._instance
+      if P(t)
+        deleted->add(t)
+
+        for idx in values(this._key_indexes)
+          idx.Remove(t)
+        endfor
+      endif
+    endfor
+
+    filter(this._instance, (_, t) => !P(t))
+
+    for constraint in this.delete_constraints
+      for t in deleted
+        if !constraint.Check(t)
+          for u in deleted
+            this.SimpleInsert_(u)
+          endfor
+
+          FailedMsg(printf(E011, constraint, TupleStr(t)), true)
+
+          throw string(logger)
+        endif
+      endfor
+    endfor
+
+    return deleted
+  enddef
+
+  def TransactDelete_(P: UnaryPredicate = (t) => true): Relation
     var deleted: list<Tuple> = []
 
     globalTransactionManager.Add(this)
@@ -603,16 +670,29 @@ export class Rel implements IRel, ICheckable, ITransactable
   enddef
 
   def InsertMany(tuples: list<Tuple>): Rel
-    Transaction(() => {
-      for t in tuples
-        this.Insert(t)
-      endfor
-    })
+    for t in tuples
+      this.Insert(t)
+    endfor
 
     return this
   enddef
 
   def Update(P: UnaryPredicate, Set: func(Tuple))
+    if globalTransactionManager.InTransaction()
+      this.TransactUpdate_(P, Set)
+    else
+      this.SimpleUpdate_(P, Set)
+    endif
+  enddef
+
+  def SimpleUpdate_(P: UnaryPredicate, Set: func(Tuple))
+    this.InsertMany(map(this.SimpleDelete_(P), (_, t) => {
+      Set(t)
+      return t
+    }))
+  enddef
+
+  def TransactUpdate_(P: UnaryPredicate, Set: func(Tuple))
     globalTransactionManager.Add(this)
 
     Transaction(() => {
@@ -658,10 +738,8 @@ export class Rel implements IRel, ICheckable, ITransactable
       return
     endif
 
-    Transaction(() => {
-      this.Delete((v) => v == u)
-      this.Insert(t)
-    })
+    this.Remove_(u)
+    this.Insert(t)
   enddef
 
   def TypeCheck_(t: Tuple)
