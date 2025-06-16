@@ -243,6 +243,7 @@ var sColorscheme:    react.Property = react.Property.new(exists('g:colors_name')
 var sHiGroup:        react.Property                          # Reference to the current highlight group for autocommands
 var sX:              number         = 0                      # Horizontal position of the style picker
 var sY:              number         = 0                      # Vertical position of the style picker
+var sWinID:          number         = -1                     # ID of the style picker popup
 var sLastClickedRow: number         = 0                      # Window row where the mouse is currently left pressed
 var sRedrawCount:    number         = 0                      # Number of times the popup has been redrawn
 var sRecent:         react.Property = react.Property.new([]) # Cached recent colors to persist across close/reopen
@@ -1933,8 +1934,9 @@ enddef
 
 def ClosedCallback(winid: number, result: any = '')
   DisableAllAutocommands()
-  sX = popup_getoptions(winid).col
-  sY = popup_getoptions(winid).line
+  sX           = popup_getoptions(winid).col
+  sY           = popup_getoptions(winid).line
+  sWinID       = -1
   sRedrawCount = 0
 enddef
 
@@ -2004,6 +2006,11 @@ enddef
 # }}}
 # Public Interface {{{
 export def Open(hiGroup = '')
-  StylePickerPopup(hiGroup, sX, sY)
+  if sWinID > 0 && sWinID->In(popup_list())  # StylePicker already open
+    popup_show(sWinID)
+    return
+  endif
+
+  sWinID = StylePickerPopup(hiGroup, sX, sY)
 enddef
 # }}}
