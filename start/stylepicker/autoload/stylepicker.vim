@@ -239,7 +239,7 @@ endclass
 # }}}
 # Internal State {{{
 # Reference to the name of the current color scheme for autocommands
-var sColorscheme:    react.Property = react.Property.new(exists('g:colors_name') ? g:colors_name : '')
+var sColorscheme:    react.Property = react.Property.new(exists('g:colors_name') ? g:colors_name : 'default')
 var sHiGroup:        react.Property                          # Reference to the current highlight group for autocommands
 var sX:              number         = 0                      # Horizontal position of the style picker
 var sY:              number         = 0                      # Vertical position of the style picker
@@ -382,7 +382,7 @@ def HiGroupColorValue(hiGroup: string, fgBgSp: string, mode: string): string
   var attr = CtermAttr(fgBgSp, mode)
   var value = synIDattr(synIDtrans(hlID(hiGroup)), $'{attr}#', mode)
 
-  if empty(value)
+  if empty(value) || value->In(['fg', 'bg', 'ul']) # TODO: deal with special values better
     return 'NONE'
   endif
 
@@ -407,7 +407,6 @@ def HiGroupColorValue(hiGroup: string, fgBgSp: string, mode: string): string
   return value
 enddef
 
-#
 def GetHiGroupColor(
     hiGroup: string, fgBgSp: string, colorMode: string = Config.ColorMode()
     ): string
