@@ -918,8 +918,10 @@ class State
     feedkeys("\<esc>") # Clear partial command
 
     if what =~ '#\?[0-9a-fA-F]\{6}'
-      this.SaveToRecent()
-      this.color.Set(what)
+      react.Transaction(() => {
+        this.SaveToRecent()
+        this.color.Set(what)
+      })
     else
       Notification(this.winid, $'@{v:register} does not contain a valid color')
     endif
