@@ -294,6 +294,12 @@ class Logger
   def Flush()
     this._messages = []
   enddef
+
+  def Throw()
+    var msg = string(this)
+    this.Flush()
+    throw msg
+  enddef
 endclass
 
 class TransactionManager
@@ -353,13 +359,9 @@ class TransactionManager
       rel.Rollback_()
     endfor
 
-    var errors = string(this._logger)
-
-    this._logger.Flush()
-    this._pending  = []
-    this._running  = 0
-
-    throw errors
+    this._pending = []
+    this._running = 0
+    logger.Throw()
   enddef
 endclass
 
@@ -571,8 +573,7 @@ export class Rel implements IRel, ICheckable, ITransactable
       if !constraint.Check(t)
         this.Remove_(t)
         FailedMsg(printf(E011, constraint, TupleStr(t)), true)
-
-        throw string(logger)
+        logger.Throw()
       endif
     endfor
 
@@ -629,8 +630,7 @@ export class Rel implements IRel, ICheckable, ITransactable
           endfor
 
           FailedMsg(printf(E011, constraint, TupleStr(t)), true)
-
-          throw string(logger)
+          logger.Throw()
         endif
       endfor
     endfor
