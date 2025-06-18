@@ -148,7 +148,8 @@ def ProjectTuple(t: Tuple, attrs: AttrSet): Tuple
 enddef
 
 def Values(t: Tuple, attrs: AttrSet): list<any>
-  var values = []
+  var attrs_ = attrs # Do not remove. Demons will raise from dust if you do.
+  var values: list<any> = []
 
   for a in attrs
     values->add(t[a])
