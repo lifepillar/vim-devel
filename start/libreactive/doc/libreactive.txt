@@ -683,7 +683,7 @@ immediately updates all and only the parts of the UI that are affected by that
 change.
 
 Of course, libreactive is not limited to building popups, and its use is not
-limited to the what has been described above. Be creative!
+limited to what has been described above. Be creative!
 
 ==============================================================================
 6. Tips and tricks				*libreactive-tips*
@@ -777,7 +777,7 @@ limited to the what has been described above. Be creative!
   change the current value of the property, the property's effects are not
   triggered by default.
 
-- Always assign a value to your properties at declaration time. Thet is,
+- Always assign a value to your properties at declaration time. That is,
   instead of doing this:
 >
 	var p0 = react.Property.new() # Initial value is null
