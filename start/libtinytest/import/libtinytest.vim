@@ -339,14 +339,15 @@ export def AssertApprox(
 enddef
 
 export def AssertBenchmark(F: func(), description = '', opts: dict<any> = {})
-  var nloop        = opts->get('loop', -1)
+  var nloop        = opts->get('loop', 0)
   var repeat       = opts->get('repeat', 1)
   var severity     = opts->get('severity', {})
-  var measurements = Measure(F, repeat, nloop)
 
-  if nloop < 0
+  if nloop <= 0
     nloop = TuneBenchmark(F)
   endif
+
+  var measurements = Measure(F, repeat, nloop)
 
   Benchmarks->add(BenchmarkResult.new(
     description,
