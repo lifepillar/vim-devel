@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> **As of March 11, 2026, this repository is on [Codeberg](https://codeberg.org/lifepillar/vim-devel).**
+
 # Vim Development Package
 
 A package whose goal is to facilitate the development of modern Vim plugins and
